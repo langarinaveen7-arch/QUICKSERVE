@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started - QuickServe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div id="main-container" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <!-- This container's content will be replaced by JavaScript -->
+    </div>
+
+    <script>
+        const backendApiUrl = 'http://localhost:3002';
+
+        const mainContainer = document.getElementById('main-container');
+
+        // --- TEMPLATES ---
+        const loginTemplate = `
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Welcome Back!</h2>
+            <p class="text-center text-gray-500 mb-6">Sign in to continue.</p>
+            <button id="google-signin-btn" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition duration-300 font-semibold">
+                <img src="https://www.google.com/favicon.ico" alt="Google icon" class="w-5 h-5">
+                Sign In with Google
+            </button>
+            <div class="my-4 flex items-center">
+                <hr class="flex-grow border-gray-300"><span class="mx-2 text-gray-400 text-sm">OR</span><hr class="flex-grow border-gray-300">
+            </div>
+            <!-- Traditional login can be added here -->
+            <p class="text-center text-sm text-gray-500 mt-4">This is a simplified login. In a real app, you'd have username/password fields here.</p>
+        `;
+
+        const completeProfileTemplate = `
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Complete Your Profile</h2>
+            <p class="text-center text-gray-500 mb-6">Set up your account details.</p>
+            <form id="complete-profile-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="username" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
+                    <input type="password" id="password" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Choose your role:</label>
+                    <div class="flex gap-4">
+                        <label class="flex-1 p-4 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500">
+                            <input type="radio" name="role" value="customer" class="sr-only" required>
+                            <h3 class="font-semibold">Customer</h3>
+                            <p class="text-sm text-gray-500">I need home services.</p>
+                        </label>
+                        <label class="flex-1 p-4 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500">
+                            <input type="radio" name="role" value="captain" class="sr-only" required>
+                            <h3 class="font-semibold">Captain</h3>
+                            <p class="text-sm text-gray-500">I provide home services.</p>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-300 font-semibold">Finish Setup</button>
+            </form>
+        `;
+
+        // --- ROUTING LOGIC ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const tempId = urlParams.get('tempId');
+            const isGoogle = urlParams.get('isGoogle');
+
+            if (token) {
+                // User is fully authenticated, save token and redirect
+                localStorage.setItem('quickServeToken', token);
+                window.location.href = './index.html'; // Redirect to main page
+            } else if (tempId && isGoogle) {
+                // User signed in with Google but needs to complete profile
+                mainContainer.innerHTML = completeProfileTemplate;
+                setupCompleteProfileForm(tempId);
+            } else {
+                // Default view is the login page
+                mainContainer.innerHTML = loginTemplate;
+                setupLoginForm();
+            }
+        });
+
+        // --- EVENT HANDLER SETUP ---
+        function setupLoginForm() {
+            document.getElementById('google-signin-btn').addEventListener('click', () => {
+                window.location.href = `${backendApiUrl}/auth/google`;
+            });
+        }
+
+        function setupCompleteProfileForm(tempId) {
+            document.getElementById('complete-profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const username = form.querySelector('#username').value;
+                const password = form.querySelector('#password').value;
+                const role = form.querySelector('input[name="role"]:checked').value;
+
+                const response = await fetch(`${backendApiUrl}/api/auth/complete-profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tempId, username, password, role })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('quickServeToken', result.token);
+                    window.location.href = './index.html';
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
